@@ -173,7 +173,7 @@ Grounded Generation + Interface
 
 **Milestone 3 — Ingestion and chunking:**
 
-I will use Codex/ChatGPT/Cladue to help implement the ingestion and chunking scripts. I will provide the Domain, Documents, Chunking Strategy, and Anticipated Challenges sections from this planning file. I expect the AI tool to produce Python code that loads the source pages, removes repeated site navigation, saves cleaned documents, and chunks by section/paragraph boundaries. I will verify the output by inspecting several cleaned documents and sample chunks before building embeddings.
+I will use Codex/ChatGPT/Claude to help implement the ingestion and chunking scripts. I will provide the Domain, Documents, Chunking Strategy, and Anticipated Challenges sections from this planning file. I expect the AI tool to produce Python code that loads the source pages, removes repeated site navigation, saves cleaned documents, and chunks by section/paragraph boundaries. I will verify the output by inspecting several cleaned documents and sample chunks before building embeddings.
 
 **Milestone 4 — Embedding and retrieval:**
 
