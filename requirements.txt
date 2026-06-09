@@ -9,3 +9,6 @@ streamlit>=1.40.0
 
 # Document ingestion — add if your documents/ folder contains .pdf files:
 # pdfplumber==0.11.4
+
+# Hybrid search support:
+rank-bm25==0.2.2
