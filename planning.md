@@ -11,6 +11,8 @@
 
 <!-- What domain did you choose? Why is this knowledge valuable and hard to find through official channels? -->
 
+This project covers Yale campus dining, including residential dining halls, meal plans, dining schedules, dietary requirements, retail dining, and student-facing impressions of the dining experience. This knowledge is useful because students often need practical answers quickly, such as where they can eat, how meal swipes work, what dining halls are known for, and how dietary accommodations are handled. It is hard to find in one place because official Yale pages contain policies and location details, while more informal opinions and dining culture are scattered across articles, Reddit threads, and student conversations.
+
 ---
 
 ## Documents
@@ -20,16 +22,16 @@
 
 | # | Source | Description | URL or location |
 |---|--------|-------------|-----------------|
-| 1 | | | |
-| 2 | | | |
-| 3 | | | |
-| 4 | | | |
-| 5 | | | |
-| 6 | | | |
-| 7 | | | |
-| 8 | | | |
-| 9 | | | |
-| 10 | | | |
+| 1 | Yale Hospitality homepage | Official hub for Yale dining links, menus, schedules, meal plans, and dining services. | https://hospitality.yale.edu/ |
+| 2 | Residential Dining | Official overview of Yale's residential dining system and list of residential dining halls. | https://hospitality.yale.edu/residential-dining |
+| 3 | Explore Meal Plans | Official meal plan information, including swipes, dining points, guest swipes, costs, and restrictions. | https://hospitality.yale.edu/explore-meal-plans |
+| 4 | When & Where | Official operating hours and dining schedule information. | https://hospitality.yale.edu/when-where |
+| 5 | Dietary Requirements | Official information about dietary needs and accommodations. | https://hospitality.yale.edu/eat-well/dietary-requirements |
+| 6 | Berkeley Dining | Official page describing Berkeley dining, including dining traditions and distinctive food options. | https://hospitality.yale.edu/residential-dining/berkeley |
+| 7 | Branford Dining | Official page describing Branford dining, including culinary traditions and dining atmosphere. | https://hospitality.yale.edu/residential-dining/branford |
+| 8 | Jonathan Edwards Dining | Official page describing Jonathan Edwards dining, traditions, and dining hall atmosphere. | https://hospitality.yale.edu/residential-dining/jonathan-edwards |
+| 9 | Commons | Official page for Commons at the Schwarzman Center, including hours and accepted payment methods. | https://hospitality.yale.edu/restaurants-cafes-more/schwarzman-center/commons |
+| 10 | Bon Appetit article about Yale dining hall breakfast | Public student-culture article discussing Yale dining hall breakfast options and reactions. | https://www.bonappetit.com/story/yale-dining-hall-breakfast |
 
 ---
 
@@ -42,9 +44,15 @@
 
 **Chunk size:**
 
+Target 350-500 words per chunk, grouped by page section or paragraph boundary rather than by a fixed character count.
+
 **Overlap:**
 
+About 75 words of overlap between neighboring chunks when a page has long sections.
+
 **Reasoning:**
+
+Most of the documents are short informational web pages with headings, bullet lists, and compact descriptions. Section-aware chunks should preserve meaningful units such as "Full Plan," "Flex Plan," "We are Berkeley," or "Dietary Accommodations." A 350-500 word target is large enough to keep policy details together but small enough that retrieval can return a focused answer instead of an entire page. The 75-word overlap helps when important details appear at the boundary between two sections, such as meal plan restrictions or dining point rules.
 
 ---
 
@@ -58,9 +66,15 @@
 
 **Embedding model:**
 
+sentence-transformers/all-MiniLM-L6-v2
+
 **Top-k:**
 
+4 chunks per query.
+
 **Production tradeoff reflection:**
+
+For this course project, all-MiniLM-L6-v2 is a good choice because it runs locally, is free, is fast, and does not require an API key. In a production system, I would compare it with larger embedding models that may retrieve more accurately on policy-heavy or domain-specific text. I would also weigh cost, latency, context length, multilingual support, privacy, and whether the model should run locally or through an API.
 
 ---
 
@@ -73,11 +87,11 @@
 
 | # | Question | Expected answer |
 |---|----------|-----------------|
-| 1 | | |
-| 2 | | |
-| 3 | | |
-| 4 | | |
-| 5 | | |
+| 1 | How many residential dining halls does Yale describe as part of its dining system? | Yale describes 14 residential dining halls. |
+| 2 | What does the Full meal plan include for undergraduate students? | The Full plan includes unlimited meals at all 14 residential dining halls, guest passes, and dining points for retail locations. |
+| 3 | Which meal plan is designed for off-campus undergraduate students, and what does it include? | The Connect plan is for off-campus undergraduate students and includes weekly meal swipes plus dining points. |
+| 4 | What makes Berkeley dining distinctive according to Yale Hospitality? | Berkeley is described as a crowd-pleaser with traditions such as Thunder Brunch and options such as a Mediterranean bowl concept and gourmet pizza from a stone-hearth oven. |
+| 5 | What does the project corpus say about wait times at Yale dining halls? | This is expected to be a failure or partial failure: the chosen sources may include official hours and descriptions, but they may not contain enough direct student evidence about wait times. |
 
 ---
 
@@ -87,9 +101,11 @@
      Consider: noisy or inconsistent documents, missing source attribution, off-topic
      retrieval, chunks that split key information across boundaries. -->
 
-1.
+1. Some documents are official marketing or informational pages, so they may not include candid student complaints about food quality, crowding, or wait times. This could make the system good at answering policy questions but weaker at answering experience-based questions.
 
-2.
+2. Yale Hospitality pages repeat the same navigation menu and footer on every page. The ingestion pipeline must remove repeated navigation text, image labels, and footer links so that retrieval does not return irrelevant chunks.
+
+3. Dynamic menu pages may be harder to scrape cleanly than static text pages. If Nutrislice menu content cannot be extracted reliably, the project should either store a manually saved menu snapshot or avoid depending on live menu details in evaluation questions.
 
 ---
 
@@ -100,6 +116,46 @@
      Label each stage with the tool or library you're using.
      You can use ASCII art, a Mermaid diagram, or embed a sketch as an image.
      You'll use this diagram as context when prompting AI tools to implement each stage. -->
+
+```text
+Document Ingestion
+  - Load web pages from the 10 source URLs
+  - Strip repeated navigation, image labels, footer links, and empty lines
+  - Save structured cleaned documents with title, source URL, and text
+
+        |
+        v
+
+Chunking
+  - Split by headings and paragraph boundaries
+  - Target 350-500 words
+  - Add about 75 words overlap for long sections
+  - Save chunk text plus document metadata
+
+        |
+        v
+
+Embedding + Vector Store
+  - Embed chunks with sentence-transformers/all-MiniLM-L6-v2
+  - Store vectors and metadata in ChromaDB
+
+        |
+        v
+
+Retrieval
+  - Accept a user question
+  - Retrieve top 4 semantically similar chunks
+  - Show retrieved chunk IDs and source titles for debugging
+
+        |
+        v
+
+Grounded Generation + Interface
+  - Send only retrieved chunks to Groq llama-3.3-70b-versatile
+  - Instruct the model to answer only from retrieved context
+  - Return answer with source attribution
+  - Provide a simple query interface for demo
+```
 
 ---
 
@@ -117,6 +173,12 @@
 
 **Milestone 3 — Ingestion and chunking:**
 
+I will use Codex/ChatGPT/Cladue to help implement the ingestion and chunking scripts. I will provide the Domain, Documents, Chunking Strategy, and Anticipated Challenges sections from this planning file. I expect the AI tool to produce Python code that loads the source pages, removes repeated site navigation, saves cleaned documents, and chunks by section/paragraph boundaries. I will verify the output by inspecting several cleaned documents and sample chunks before building embeddings.
+
 **Milestone 4 — Embedding and retrieval:**
 
+I will use Codex/ChatGPT/Claude to help implement embedding and semantic retrieval with sentence-transformers and ChromaDB. I will provide the Retrieval Approach, Architecture, and Evaluation Plan sections. I expect the AI tool to produce scripts for building the vector index and running a query against top-k chunks. I will verify retrieval before generation by testing the five evaluation questions and checking whether the retrieved chunks contain the expected evidence.
+
 **Milestone 5 — Generation and interface:**
+
+I will use Codex/ChatGPT/Claude to help implement grounded generation and a simple query interface. I will provide the Architecture, Retrieval Approach, and Evaluation Plan sections, plus the requirement that answers must cite sources and must not use outside knowledge. I expect the AI tool to produce code that sends retrieved chunks to Groq and displays the answer with source attribution. I will verify the output by checking that unsupported questions return "not enough information" instead of hallucinated answers.
