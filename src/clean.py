@@ -107,7 +107,6 @@ BON_APPETIT_NAV_LINES = {
 STOP_MARKERS = {
     "official_page": [
         "Helpful Links",
-        "Connect",
         "Accessibility at Yale",
         "Copyright © 2026 Yale University",
     ],
