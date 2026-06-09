@@ -1,0 +1,62 @@
+[
+  {
+    "id": "doc01",
+    "title": "Yale Hospitality homepage",
+    "type": "official_page",
+    "url": "https://hospitality.yale.edu/"
+  },
+  {
+    "id": "doc02",
+    "title": "Residential Dining",
+    "type": "official_page",
+    "url": "https://hospitality.yale.edu/residential-dining"
+  },
+  {
+    "id": "doc03",
+    "title": "Explore Meal Plans",
+    "type": "official_page",
+    "url": "https://hospitality.yale.edu/explore-meal-plans"
+  },
+  {
+    "id": "doc04",
+    "title": "When & Where",
+    "type": "official_page",
+    "url": "https://hospitality.yale.edu/when-where"
+  },
+  {
+    "id": "doc05",
+    "title": "Dietary Requirements",
+    "type": "official_page",
+    "url": "https://hospitality.yale.edu/eat-well/dietary-requirements"
+  },
+  {
+    "id": "doc06",
+    "title": "Berkeley Dining",
+    "type": "official_page",
+    "url": "https://hospitality.yale.edu/residential-dining/berkeley"
+  },
+  {
+    "id": "doc07",
+    "title": "Branford Dining",
+    "type": "official_page",
+    "url": "https://hospitality.yale.edu/residential-dining/branford"
+  },
+  {
+    "id": "doc08",
+    "title": "Jonathan Edwards Dining",
+    "type": "official_page",
+    "url": "https://hospitality.yale.edu/residential-dining/jonathan-edwards"
+  },
+  {
+    "id": "doc09",
+    "title": "Commons",
+    "type": "official_page",
+    "url": "https://hospitality.yale.edu/restaurants-cafes-more/schwarzman-center/commons"
+  },
+  {
+    "id": "doc10",
+    "title": "Bon Appetit article about Yale dining hall breakfast",
+    "type": "article",
+    "url": "https://www.bonappetit.com/story/yale-dining-hall-breakfast"
+  }
+]
