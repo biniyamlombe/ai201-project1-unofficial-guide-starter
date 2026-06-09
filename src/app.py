@@ -119,7 +119,20 @@ for idx, q in enumerate(eval_questions, 1):
     st.sidebar.button(f"Q{idx}: {q[:55]}...", key=f"q_btn_{idx}", on_click=set_query, args=(q,))
 
 st.sidebar.markdown("---")
-st.sidebar.caption("System Stack: sentence-transformers/all-MiniLM-L6-v2 | ChromaDB | Groq (llama-3.3-70b-versatile)")
+retrieval_method_label = st.sidebar.selectbox(
+    "Retrieval Method",
+    ["Semantic (Vector)", "Keyword (BM25)", "Hybrid (RRF)"],
+    index=0
+)
+method_map = {
+    "Semantic (Vector)": "semantic",
+    "Keyword (BM25)": "keyword",
+    "Hybrid (RRF)": "hybrid"
+}
+selected_method = method_map[retrieval_method_label]
+
+st.sidebar.markdown("---")
+st.sidebar.caption("System Stack: sentence-transformers/all-MiniLM-L6-v2 | rank-bm25 | ChromaDB | Groq (llama-3.3-70b-versatile)")
 
 # 3. Main Interface Layout
 st.markdown("<div class='main-header'>Yale Campus Dining Assistant</div>", unsafe_allow_html=True)
@@ -131,25 +144,32 @@ query = st.text_input("Ask a question about Yale Dining:", value=st.session_stat
 if query:
     st.markdown("### Answer")
     with st.spinner("Retrieving sources and generating grounded answer..."):
-        answer, sources = generate_answer(query, collection, embed_model, groq_client)
+        answer, sources = generate_answer(query, collection, embed_model, groq_client, retrieval_method=selected_method)
         
     st.markdown(answer)
     
     # 4. Citations & Sources UI
     st.markdown("---")
     with st.expander("🔍 View Retrieved Sources & Distance Scores", expanded=False):
-        st.write("The following passages were retrieved from the vector database to build the response:")
+        st.write(f"The following passages were retrieved using **{retrieval_method_label}** search to build the response:")
         
         # Display the sources in columns or cards
         for rank, res in enumerate(sources, 1):
             meta = res["metadata"]
-            dist = res["distance"]
+            
+            # Determine which badge to show
+            if "rrf_score" in res:
+                badge_text = f"RRF Score: {res['rrf_score']:.6f} | Dist: {res['distance']:.4f}"
+            elif "bm25_score" in res:
+                badge_text = f"BM25 Score: {res['bm25_score']:.4f}"
+            else:
+                badge_text = f"Distance: {res['distance']:.4f}"
             
             st.markdown(f"""
                 <div class='source-card'>
                     <div style='display: flex; justify-content: space-between;'>
                         <span class='source-title'>Rank {rank}: {meta['title']}</span>
-                        <span class='distance-badge'>Distance: {dist:.4f}</span>
+                        <span class='distance-badge'>{badge_text}</span>
                     </div>
                     <div class='source-meta'>URL: <a href='{meta['url']}' target='_blank'>{meta['url']}</a></div>
                     <div style='margin-top: 8px; font-size: 0.9rem; color: #334155; line-height: 1.5; font-style: italic;'>

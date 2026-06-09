@@ -23,9 +23,33 @@ COLLECTION_NAME = "yale_dining_guide"
 DEFAULT_MODEL = "llama-3.3-70b-versatile"
 
 
-def generate_answer(query_str, collection, embed_model, groq_client, model_name=DEFAULT_MODEL, k=4):
-    # 1. Retrieve relevant chunks
-    results = retrieve(query_str, collection, embed_model, k=k)
+def generate_answer(query_str, collection, embed_model, groq_client, model_name=DEFAULT_MODEL, k=4, retrieval_method="semantic"):
+    # 1. Retrieve relevant chunks based on chosen method
+    if retrieval_method == "semantic":
+        results = retrieve(query_str, collection, embed_model, k=k)
+    elif retrieval_method == "keyword":
+        from src.hybrid_retrieve import get_bm25_searcher
+        bm25_searcher = get_bm25_searcher()
+        bm25_results = bm25_searcher.search(query_str, top_n=k)
+        results = []
+        for score, chunk in bm25_results:
+            results.append({
+                "id": chunk["id"],
+                "distance": 1.0,
+                "metadata": {
+                    "document_id": chunk["document_id"],
+                    "title": chunk["title"],
+                    "url": chunk["url"],
+                    "chunk_index": chunk["chunk_index"],
+                },
+                "document": chunk["text"],
+                "bm25_score": score
+            })
+    elif retrieval_method == "hybrid":
+        from src.hybrid_retrieve import hybrid_retrieve
+        results = hybrid_retrieve(query_str, collection, embed_model, k=k)
+    else:
+        raise ValueError(f"Unknown retrieval method: {retrieval_method}")
     
     # 2. Format context
     context_parts = []
@@ -72,7 +96,7 @@ Strict grounding guidelines:
     return answer, results
 
 
-def run_evaluations(collection, embed_model, groq_client):
+def run_evaluations(collection, embed_model, groq_client, retrieval_method="semantic"):
     queries = [
         "How many residential dining halls does Yale describe as part of its dining system?",
         "What does the Full meal plan include for undergraduate students?",
@@ -82,19 +106,24 @@ def run_evaluations(collection, embed_model, groq_client):
     ]
 
     print("=" * 80)
-    print("RUNNING END-TO-END EVALUATION")
+    print(f"RUNNING END-TO-END EVALUATION ({retrieval_method.upper()} SEARCH)")
     print("=" * 80)
 
     for i, query in enumerate(queries, 1):
         print(f"\nQUESTION #{i}: '{query}'")
         print("-" * 60)
-        answer, sources = generate_answer(query, collection, embed_model, groq_client)
+        answer, sources = generate_answer(query, collection, embed_model, groq_client, retrieval_method=retrieval_method)
         print(f"ANSWER:\n{answer}")
         print("-" * 60)
         print("SOURCES RETRIEVED:")
         for rank, res in enumerate(sources, 1):
             meta = res["metadata"]
-            print(f"  {rank}. {meta['title']} (Distance: {res['distance']:.4f})")
+            if "rrf_score" in res:
+                print(f"  {rank}. {meta['title']} (RRF: {res['rrf_score']:.6f} | Dist: {res['distance']:.4f})")
+            elif "bm25_score" in res:
+                print(f"  {rank}. {meta['title']} (BM25: {res['bm25_score']:.4f})")
+            else:
+                print(f"  {rank}. {meta['title']} (Distance: {res['distance']:.4f})")
         print("=" * 80)
 
 
@@ -104,6 +133,7 @@ def main():
     parser.add_argument("--db-dir", type=str, default=DEFAULT_DB_DIR)
     parser.add_argument("--collection", type=str, default=COLLECTION_NAME)
     parser.add_argument("--model", type=str, default=DEFAULT_MODEL)
+    parser.add_argument("--method", type=str, default="semantic", choices=["semantic", "keyword", "hybrid"], help="Retrieval method to use")
     args = parser.parse_args()
 
     if not GROQ_API_KEY:
@@ -124,15 +154,20 @@ def main():
 
     # 3. Execute
     if args.query:
-        print(f"Query: '{args.query}'\n")
-        answer, sources = generate_answer(args.query, collection, embed_model, groq_client, model_name=args.model)
+        print(f"Query: '{args.query}' (Method: {args.method})\n")
+        answer, sources = generate_answer(args.query, collection, embed_model, groq_client, model_name=args.model, retrieval_method=args.method)
         print(f"Answer:\n{answer}\n")
         print("Sources:")
         for res in sources:
             meta = res["metadata"]
-            print(f"- {meta['title']} ({meta['url']}) [Distance: {res['distance']:.4f}]")
+            if "rrf_score" in res:
+                print(f"- {meta['title']} ({meta['url']}) [RRF: {res['rrf_score']:.6f} | Dist: {res['distance']:.4f}]")
+            elif "bm25_score" in res:
+                print(f"- {meta['title']} ({meta['url']}) [BM25: {res['bm25_score']:.4f}]")
+            else:
+                print(f"- {meta['title']} ({meta['url']}) [Distance: {res['distance']:.4f}]")
     else:
-        run_evaluations(collection, embed_model, groq_client)
+        run_evaluations(collection, embed_model, groq_client, retrieval_method=args.method)
 
 
 if __name__ == "__main__":

@@ -136,6 +136,38 @@ Below are 3 retrieval test examples from our vector store:
 
 ---
 
+## Hybrid Search Approach
+
+### Combination Strategy
+We implemented a hybrid search system that combines lexical keyword search (BM25) with semantic vector search (ChromaDB) using **Reciprocal Rank Fusion (RRF)**. 
+BM25 uses the `rank-bm25` package to perform keyword-level matching on tokenized alphanumeric queries. The vector search computes cosine distance on semantic vectors.
+Because merging raw cosine distances (scale 0 to 1) with raw BM25 scores (scale 0 to infinity) is mathematically inconsistent, we use RRF to combine their ranks:
+$$RRF(d) = \frac{1}{60 + r_{\text{vector}}(d)} + \frac{1}{60 + r_{\text{bm25}}(d)}$$
+We query the top 10 results from both indices, calculate their fusion score, and return the top `k` unified results.
+
+### Query Comparison Report
+We tested and compared the retrieval performance of the three search methods across 3 test queries:
+
+1. **Query:** *"Berkeley Thunder Brunch"*
+   - **Semantic Result:** Retrieved `doc06_chunk00` as Rank 1 with a high cosine distance of `0.9223` (weak match).
+   - **BM25 Result:** Retrieved `doc06_chunk00` as Rank 1 with a high keyword match score.
+   - **Hybrid Result:** Retrieved `doc06_chunk00` as Rank 1 (RRF score: `0.032787`).
+   - **Better Performer:** **Keyword / Hybrid.** Because `"Berkeley Thunder Brunch"` is a short, keyword-dense query, the semantic embedding model returned a very high distance score (0.9223). BM25 matched the words "Berkeley" and "Thunder Brunch" perfectly, ensuring it stayed at Rank 1. Hybrid successfully leveraged this to keep the target chunk as the top result.
+
+2. **Query:** *"What does the Full meal plan include?"*
+   - **Semantic Result:** Retrieved `doc03_chunk00` as Rank 1 (Distance: `0.3340`).
+   - **BM25 Result:** Retrieved `doc03_chunk00` as Rank 1.
+   - **Hybrid Result:** Retrieved `doc03_chunk00` as Rank 1 (RRF score: `0.032787`).
+   - **Better Performer:** **Tie.** All three methods performed equally well. The query has explicit terminology ("Full meal plan") and a clear concept, enabling both lexical and vector indices to easily rank the primary full meal plan chunk as Rank 1.
+
+3. **Query:** *"Does Slifka allow multiple swipes?"*
+   - **Semantic Result:** Retrieved `doc03_chunk00` as Rank 1 (Distance: `0.5332`).
+   - **BM25 Result:** Retrieved `doc05_chunk01` (Dietary Requirements FAQ) as Rank 1.
+   - **Hybrid Result:** Retrieved `doc03_chunk00` as Rank 1 (RRF score: `0.032787`).
+   - **Better Performer:** **Semantic / Hybrid.** The correct policy context resides in `doc03_chunk00` (*"Multiple swipes cannot be used in both Slifka and any of the (14) residential dining halls..."*). BM25 ranked `doc05_chunk01` higher simply because the word "Slifka" was mentioned multiple times across different unrelated dietary FAQ lines, showing a typical keyword search noise failure. Vector search matched the semantic meaning of "multiple swipes" restrictions and put `doc03_chunk00` at Rank 1, which the Hybrid system preserved.
+
+---
+
 ## Grounded Generation
 
 **System prompt grounding instruction:**
